@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabaseClient';
 import ApprovalsClient from './ui';
-import { cookies } from 'next/headers'; // implicit SSR – but we'll fetch on the server with anon key
+//import { cookies } from 'next/headers'; //I commented out  line after the deplohyment failed.  // implicit SSR – but we'll fetch on the server with anon key
 // NOTE: This page fetches data server-side using your anon key; RLS still applies.
 
 export default async function ApprovalsPage() {
