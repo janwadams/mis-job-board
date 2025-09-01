@@ -9,18 +9,21 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
 
+type JobType = 'Internship' | 'Full-time' | 'Contract';
+type AppMethod = 'email' | 'url' | 'phone';
+
 export default function PostJobPage() {
   const router = useRouter();
   const [form, setForm] = useState({
     title: '',
     company: '',
     industry: '',
-    job_type: '' as 'Internship'|'Full-time'|'Contract'| '',
+    job_type: '' as JobType | '',
     description: '',
     responsibilities: '',
     skills: '',
     deadline: '',
-    application_method: '' as 'email'|'url'|'phone'| '',
+    application_method: '' as AppMethod | '',
     application_value: '',
   });
   const [msg, setMsg] = useState<string | null>(null);
@@ -33,7 +36,14 @@ export default function PostJobPage() {
 
   async function submit() {
     setErr(null); setMsg(null);
-    if (!form.title || !form.company || !form.job_type || !form.deadline || !form.application_method || !form.application_value) {
+    if (
+      !form.title ||
+      !form.company ||
+      !form.job_type ||
+      !form.deadline ||
+      !form.application_method ||
+      !form.application_value
+    ) {
       setErr('Please complete required fields.');
       return;
     }
@@ -76,7 +86,9 @@ export default function PostJobPage() {
             <Input placeholder="Company Name *" value={form.company} onChange={(e) => update('company', e.target.value)} />
             <div className="grid gap-3 md:grid-cols-3">
               <Input placeholder="Industry" value={form.industry} onChange={(e) => update('industry', e.target.value)} />
-              <Select onValueChange={(v) => update('job_type', v as any)}>
+
+              {/* FIXED: typed onValueChange */}
+              <Select onValueChange={(v: JobType) => update('job_type', v)}>
                 <SelectTrigger><SelectValue placeholder="Job Type *" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Internship">Internship</SelectItem>
@@ -84,6 +96,7 @@ export default function PostJobPage() {
                   <SelectItem value="Contract">Contract</SelectItem>
                 </SelectContent>
               </Select>
+
               <Input type="date" value={form.deadline} onChange={(e) => update('deadline', e.target.value)} />
             </div>
 
@@ -92,7 +105,8 @@ export default function PostJobPage() {
             <Textarea rows={2} placeholder="Required Skills" value={form.skills} onChange={(e) => update('skills', e.target.value)} />
 
             <div className="grid gap-3 md:grid-cols-2">
-              <Select onValueChange={(v) => update('application_method', v as any)}>
+              {/* FIXED: typed onValueChange */}
+              <Select onValueChange={(v: AppMethod) => update('application_method', v)}>
                 <SelectTrigger><SelectValue placeholder="Application Method *" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="email">Email</SelectItem>
@@ -100,7 +114,12 @@ export default function PostJobPage() {
                   <SelectItem value="phone">Phone</SelectItem>
                 </SelectContent>
               </Select>
-              <Input placeholder="Email / URL / Phone *" value={form.application_value} onChange={(e) => update('application_value', e.target.value)} />
+
+              <Input
+                placeholder="Email / URL / Phone *"
+                value={form.application_value}
+                onChange={(e) => update('application_value', e.target.value)}
+              />
             </div>
 
             <div className="pt-2">
