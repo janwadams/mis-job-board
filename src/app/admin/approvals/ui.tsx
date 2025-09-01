@@ -1,40 +1,69 @@
 'use client';
+
 import { supabase } from '@/lib/supabaseClient';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 type PendingItem = {
   id: string;
   title: string;
   company: string;
-  deadline: string; // ISO date
+  deadline: string; // ISO
   status?: string;
 };
 
-export default function ApprovalsClient({ items }: { items: PendingItem[] }) {
+export default function ApprovalsClient({
+  items,
+  errorText,
+}: {
+  items: PendingItem[];
+  errorText: string | null;
+}) {
   async function approve(id: string) {
     const { error } = await supabase.from('postings').update({ status: 'approved' }).eq('id', id);
-    alert(error ? `Error: ${error.message}` : 'Approved! Refresh page.');
+    alert(error ? `Error: ${error.message}` : 'Approved! Refreshing…');
+    location.reload();
   }
-  async function remove(id: string) {
+  async function reject(id: string) {
     const { error } = await supabase.from('postings').update({ status: 'removed' }).eq('id', id);
-    alert(error ? `Error: ${error.message}` : 'Removed. Refresh page.');
+    alert(error ? `Error: ${error.message}` : 'Removed. Refreshing…');
+    location.reload();
   }
 
-  if (!items?.length) return <p className="mt-3">No pending items 🎉</p>;
+  if (errorText) {
+    return (
+      <Card className="border-red-200 bg-red-50">
+        <CardContent className="p-5 text-red-700">{errorText}</CardContent>
+      </Card>
+    );
+  }
+
+  if (!items?.length) {
+    return <p className="text-gray-600">No pending items 🎉</p>;
+  }
 
   return (
-    <ul className="grid gap-3 mt-4">
+    <div className="grid gap-4">
       {items.map((p) => (
-        <li key={p.id} className="border rounded p-3 flex items-center justify-between">
-          <div>
-            <div className="font-medium">{p.title}</div>
-            <div className="text-sm text-gray-600">{p.company} • {p.deadline}</div>
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => approve(p.id)} className="bg-emerald-600 text-white px-3 py-1 rounded">Approve</button>
-            <button onClick={() => remove(p.id)} className="border px-3 py-1 rounded">Reject</button>
-          </div>
-        </li>
+        <Card key={p.id} className="rounded-2xl border-emerald-200">
+          <CardContent className="flex items-center justify-between gap-4 p-5">
+            <div>
+              <div className="text-lg font-semibold text-emerald-900">{p.title}</div>
+              <div className="text-sm text-emerald-700">
+                {p.company} • Deadline: {new Date(p.deadline).toLocaleDateString()}
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={() => approve(p.id)} className="bg-emerald-600 hover:bg-emerald-700">
+                Approve
+              </Button>
+              <Button variant="outline" onClick={() => reject(p.id)}>
+                Reject
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       ))}
-    </ul>
+    </div>
   );
 }
