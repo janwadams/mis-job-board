@@ -14,7 +14,6 @@ export default function ApprovalsClient({ items }: { items: PendingItem[] }) {
     const { error } = await supabase.from('postings').update({ status: 'approved' }).eq('id', id);
     alert(error ? `Error: ${error.message}` : 'Approved! Refresh page.');
   }
-
   async function remove(id: string) {
     const { error } = await supabase.from('postings').update({ status: 'removed' }).eq('id', id);
     alert(error ? `Error: ${error.message}` : 'Removed. Refresh page.');
