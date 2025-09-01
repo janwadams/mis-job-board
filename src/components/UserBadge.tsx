@@ -15,26 +15,43 @@ export default function UserBadge() {
   const [role, setRole] = useState<Role>('anonymous');
   const [loading, setLoading] = useState(true);
 
+  // initial load
   useEffect(() => {
     let alive = true;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!alive) return;
 
-      setEmail(user?.email ?? null);
       if (user) {
+        setEmail(user.email ?? null);
         const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
-        setRole((data?.role as Role) ?? 'student');
+        setRole(((data?.role as Role) ?? 'student'));
       } else {
+        setEmail(null);
         setRole('anonymous');
       }
       setLoading(false);
     })();
 
-    // re-render header on auth changes
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
+    // react to auth changes
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event) => {
+      if (event === 'SIGNED_OUT') {
+        // update local UI immediately
+        setEmail(null);
+        setRole('anonymous');
+        router.replace('/');
+      } else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        const { data: { user } } = await supabase.auth.getUser();
+        setEmail(user?.email ?? null);
+        if (user) {
+          const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+          setRole(((data?.role as Role) ?? 'student'));
+        }
+      }
+      // ensure server components revalidate if needed
       router.refresh();
     });
+
     return () => {
       alive = false;
       sub.subscription.unsubscribe();
@@ -43,8 +60,7 @@ export default function UserBadge() {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    router.replace('/');
-    router.refresh();
+    // onAuthStateChange will run and update UI + navigate
   }
 
   const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
