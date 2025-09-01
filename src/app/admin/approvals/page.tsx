@@ -1,10 +1,7 @@
 import { supabase } from '@/lib/supabaseClient';
 import ApprovalsClient from './ui';
-//import { cookies } from 'next/headers'; //I commented out  line after the deplohyment failed.  // implicit SSR – but we'll fetch on the server with anon key
-// NOTE: This page fetches data server-side using your anon key; RLS still applies.
 
 export default async function ApprovalsPage() {
-  // Pull pending posts; RLS will only return rows if the viewer is faculty/admin when updating.
   const { data, error } = await supabase
     .from('postings')
     .select('id, title, company, status, deadline')
