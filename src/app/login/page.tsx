@@ -1,50 +1,52 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState('student@demo.edu');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  // If already logged in, bounce to home
+  // If already logged in, redirect immediately
   useEffect(() => {
     (async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.replace('/');
-        router.refresh();
+        // Hard redirect = most reliable in all browsers/SSR states
+        window.location.href = '/';
       }
     })();
-  }, [router]);
+
+    // Fallback: react to auth changes (e.g., after sign-in)
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session) {
+        window.location.href = '/';
+      }
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
     setErr(null);
     setLoading(true);
-
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-
     setLoading(false);
     if (error) {
       setErr(error.message);
       return;
     }
-    // success: go home and refresh UI
-    router.replace('/');
-    router.refresh();
+    // Hard redirect so we definitely leave /login
+    window.location.href = '/';
   }
 
   async function signOut() {
     await supabase.auth.signOut();
-    router.replace('/');
-    router.refresh();
+    window.location.href = '/';
   }
 
   return (
