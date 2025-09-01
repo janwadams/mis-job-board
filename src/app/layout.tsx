@@ -1,37 +1,22 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import UserBadge from "@/components/UserBadge";   //added this line
+import UserBadge from "@/components/UserBadge";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
+const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "MIS Job Board",
-  description: "Capstone project job board with Supabase auth",
+  description: "MIS Student Job Board",
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {/* This renders at the top of every page */}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        {/* header w/ sign-in / sign-out */}
         <UserBadge />
-
-        {/* This is where the page-specific content goes */}
         {children}
       </body>
     </html>

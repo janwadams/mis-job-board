@@ -6,40 +6,37 @@ import { useRouter, usePathname } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
 
-type Profile = { role: 'student'|'faculty'|'company'|'admin' };
+type Role = 'student' | 'faculty' | 'company' | 'admin' | 'anonymous';
 
 export default function UserBadge() {
   const router = useRouter();
   const pathname = usePathname();
   const [email, setEmail] = useState<string | null>(null);
-  const [role, setRole] = useState<Profile['role'] | 'anonymous'>('anonymous');
+  const [role, setRole] = useState<Role>('anonymous');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let active = true;
+    let alive = true;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!active) return;
-      setEmail(user?.email ?? null);
+      if (!alive) return;
 
+      setEmail(user?.email ?? null);
       if (user) {
-        const { data: p } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle();
-        if (p?.role) setRole(p.role);
+        const { data } = await supabase.from('profiles').select('role').eq('id', user.id).maybeSingle();
+        setRole((data?.role as Role) ?? 'student');
       } else {
         setRole('anonymous');
       }
       setLoading(false);
     })();
 
+    // re-render header on auth changes
     const { data: sub } = supabase.auth.onAuthStateChange(() => {
       router.refresh();
     });
     return () => {
-      active = false;
+      alive = false;
       sub.subscription.unsubscribe();
     };
   }, [router]);
@@ -50,14 +47,14 @@ export default function UserBadge() {
     router.refresh();
   }
 
-  const LinkBtn = ({ href, label }: { href: string; label: string }) => (
+  const NavLink = ({ href, children }: { href: string; children: React.ReactNode }) => (
     <Link
       href={href}
       className={`rounded-md px-3 py-2 text-sm ${
         pathname === href ? 'bg-emerald-100 text-emerald-800' : 'hover:bg-emerald-50'
       }`}
     >
-      {label}
+      {children}
     </Link>
   );
 
@@ -67,9 +64,9 @@ export default function UserBadge() {
         <div className="flex items-center gap-1">
           <Link href="/" className="mr-2 font-semibold text-emerald-800">MIS Job Board</Link>
           <nav className="flex items-center gap-1">
-            <LinkBtn href="/" label="Home" />
-            <LinkBtn href="/admin/approvals" label="Approvals" />
-            <LinkBtn href="/post" label="Post a Job" />
+            <NavLink href="/">Home</NavLink>
+            <NavLink href="/admin/approvals">Approvals</NavLink>
+            <NavLink href="/post">Post a Job</NavLink>
           </nav>
         </div>
 
@@ -77,6 +74,7 @@ export default function UserBadge() {
           <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-800">
             Role: {loading ? '…' : role}
           </span>
+
           {email ? (
             <>
               <span className="hidden text-sm text-gray-600 md:block">{email}</span>
