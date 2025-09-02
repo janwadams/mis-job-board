@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import RoleGate from '@/components/RoleGate';
 import { supabase } from '@/lib/supabaseClient';
 import { Card, CardContent } from '@/components/ui/card';
@@ -22,11 +22,11 @@ type Row = {
 export default function AdminJobs() {
   const [rows, setRows] = useState<Row[]>([]);
   const [q, setQ] = useState('');
-  const [status, setStatus] = useState<string>('all');
+  const [status, setStatus] = useState<'all' | Row['status']>('all');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     setErr(null);
     let qy = supabase
       .from('postings')
@@ -39,10 +39,11 @@ export default function AdminJobs() {
     const { data, error } = await qy;
     if (error) setErr(error.message);
     setRows((data ?? []) as Row[]);
-  }
+  }, [q, status]);
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [q, status]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   async function act(id: string, next: Row['status']) {
     setBusy(id);
@@ -59,7 +60,7 @@ export default function AdminJobs() {
           <h1 className="mb-4 text-2xl font-semibold text-emerald-900">All Job Postings</h1>
           <div className="mb-4 flex flex-wrap items-center gap-3">
             <Input placeholder="Search title/company…" value={q} onChange={(e) => setQ(e.target.value)} className="w-[240px]" />
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status} onValueChange={(v: 'all' | Row['status']) => setStatus(v)}>
               <SelectTrigger className="w-[180px]"><SelectValue placeholder="Status" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All</SelectItem>
@@ -67,6 +68,7 @@ export default function AdminJobs() {
                 <SelectItem value="approved">Approved</SelectItem>
                 <SelectItem value="archived">Archived</SelectItem>
                 <SelectItem value="removed">Removed</SelectItem>
+                <SelectItem value="withdrawn">Withdrawn</SelectItem>
               </SelectContent>
             </Select>
             <Link href="/admin/approvals">
@@ -75,7 +77,9 @@ export default function AdminJobs() {
           </div>
 
           {err && (
-            <Card className="mb-4 border-red-200 bg-red-50"><CardContent className="p-4 text-red-700">{err}</CardContent></Card>
+            <Card className="mb-4 border-red-200 bg-red-50">
+              <CardContent className="p-4 text-red-700">{err}</CardContent>
+            </Card>
           )}
 
           <div className="grid gap-4">

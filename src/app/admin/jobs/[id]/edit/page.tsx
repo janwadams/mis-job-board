@@ -8,10 +8,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@/components/ui/select';
+import {
+  Select, SelectTrigger, SelectValue, SelectContent, SelectItem,
+} from '@/components/ui/select';
 
 type JobType = 'Internship' | 'Full-time' | 'Contract';
 type AppMethod = 'email' | 'url' | 'phone';
+type Status = 'pending' | 'approved' | 'removed' | 'withdrawn' | 'archived';
 
 export default function EditJobPage() {
   const { id } = useParams<{ id: string }>();
@@ -29,7 +32,7 @@ export default function EditJobPage() {
     deadline: '',
     application_method: '' as AppMethod | '',
     application_value: '',
-    status: 'pending' as 'pending'|'approved'|'removed'|'withdrawn'|'archived',
+    status: 'pending' as Status,
   });
 
   function update<K extends keyof typeof form>(k: K, v: (typeof form)[K]) {
@@ -49,10 +52,10 @@ export default function EditJobPage() {
         description: data.description ?? '',
         responsibilities: data.responsibilities ?? '',
         skills: data.skills ?? '',
-        deadline: (data.deadline ?? '').slice(0,10),
+        deadline: (data.deadline ?? '').slice(0, 10),
         application_method: data.application_method ?? '',
         application_value: data.application_value ?? '',
-        status: data.status ?? 'pending',
+        status: (data.status ?? 'pending') as Status,
       });
       setLoading(false);
     })();
@@ -64,10 +67,10 @@ export default function EditJobPage() {
       title: form.title,
       company: form.company,
       industry: form.industry,
-      job_type: form.job_type,
-      description: form.description,
-      responsibilities: form.responsibilities,
-      skills: form.skills,
+      job_type: form.job_type || null,
+      description: form.description || null,
+      responsibilities: form.responsibilities || null,
+      skills: form.skills || null,
       deadline: form.deadline,
       application_method: form.application_method,
       application_value: form.application_value,
@@ -91,7 +94,7 @@ export default function EditJobPage() {
                 <Input placeholder="Company" value={form.company} onChange={(e) => update('company', e.target.value)} />
                 <div className="grid gap-3 md:grid-cols-3">
                   <Input placeholder="Industry" value={form.industry} onChange={(e) => update('industry', e.target.value)} />
-                  <Select value={form.job_type} onValueChange={(v: JobType) => update('job_type', v)}>
+                  <Select value={form.job_type || undefined} onValueChange={(v: JobType) => update('job_type', v)}>
                     <SelectTrigger><SelectValue placeholder="Job Type" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Internship">Internship</SelectItem>
@@ -107,7 +110,7 @@ export default function EditJobPage() {
                 <Textarea rows={2} placeholder="Skills" value={form.skills} onChange={(e) => update('skills', e.target.value)} />
 
                 <div className="grid gap-3 md:grid-cols-2">
-                  <Select value={form.application_method} onValueChange={(v: AppMethod) => update('application_method', v)}>
+                  <Select value={form.application_method || undefined} onValueChange={(v: AppMethod) => update('application_method', v)}>
                     <SelectTrigger><SelectValue placeholder="Application Method" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="email">Email</SelectItem>
@@ -118,13 +121,14 @@ export default function EditJobPage() {
                   <Input placeholder="Email / URL / Phone" value={form.application_value} onChange={(e) => update('application_value', e.target.value)} />
                 </div>
 
-                <Select value={form.status} onValueChange={(v: any) => update('status', v)}>
+                <Select value={form.status} onValueChange={(v: Status) => update('status', v)}>
                   <SelectTrigger><SelectValue placeholder="Status" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="pending">Pending</SelectItem>
                     <SelectItem value="approved">Approved</SelectItem>
                     <SelectItem value="archived">Archived</SelectItem>
                     <SelectItem value="removed">Removed</SelectItem>
+                    <SelectItem value="withdrawn">Withdrawn</SelectItem>
                   </SelectContent>
                 </Select>
 
