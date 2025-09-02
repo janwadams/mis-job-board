@@ -1,3 +1,4 @@
+// src/app/layout.tsx
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -11,13 +12,20 @@ export const metadata: Metadata = {
   description: "MIS Student Job Board",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        {/* header w/ sign-in / sign-out */}
+      {/* Add base background + text color so all routes inherit a consistent look */}
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-emerald-50 text-emerald-950`}>
+        {/* Global header with role-aware nav (Home / Post / Approvals / Jobs) */}
         <UserBadge />
-        {children}
+
+        {/* Main content for each route */}
+        <main>{children}</main>
       </body>
     </html>
   );
