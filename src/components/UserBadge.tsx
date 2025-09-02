@@ -1,68 +1,125 @@
+// src/components/UserBadge.tsx
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 
+type Role = "student" | "faculty" | "company" | "admin" | null;
+
 export default function UserBadge() {
-  const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<string | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<Role>(null);
 
   useEffect(() => {
-    // Check current session
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) {
-        setUser(data.session.user);
-        setRole(data.session.user.user_metadata.role || null);
-      }
-    });
+    let mounted = true;
 
-    // Listen for changes (sign in / sign out)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        setRole(session.user.user_metadata.role || null);
+    async function load() {
+      const { data } = await supabase.auth.getUser();
+      if (!mounted) return;
+
+      const currentUser = data.user ?? null;
+      setUser(currentUser);
+
+      if (currentUser) {
+        const { data: prof } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", currentUser.id)
+          .maybeSingle();
+
+        setRole((prof?.role as Role) ?? null);
       } else {
-        setUser(null);
         setRole(null);
       }
+    }
+
+    load();
+
+    const { data: sub } = supabase.auth.onAuthStateChange(async () => {
+      if (!mounted) return;
+      await load();
     });
 
     return () => {
-      subscription.unsubscribe();
+      mounted = false;
+      sub.subscription.unsubscribe();
     };
   }, []);
 
   async function handleSignOut() {
     await supabase.auth.signOut();
+    // reset local state and redirect home
     setUser(null);
     setRole(null);
-    window.location.href = "/"; // Redirect to home after sign out
-  }
-
-  async function handleSignIn() {
-    window.location.href = "/login"; // Redirect to your login page
+    window.location.href = "/";
   }
 
   return (
-    <div className="flex items-center justify-end gap-4 p-4 border-b bg-white">
-      {user ? (
-        <>
-          <span className="text-sm px-2 py-1 rounded-full bg-emerald-100 text-emerald-800">
-            Role: {role ?? "unknown"}
+    <header className="flex items-center justify-between bg-emerald-800 px-6 py-4 text-white">
+      <nav className="flex items-center gap-4">
+        <Link href="/" className="text-lg font-bold hover:text-emerald-200">
+          MIS Job Board
+        </Link>
+
+        <Link href="/" className="hover:text-emerald-200">
+          Home
+        </Link>
+
+        {(role === "company" || role === "faculty" || role === "admin") && (
+          <Link href="/post" className="hover:text-emerald-200">
+            Post a Job
+          </Link>
+        )}
+
+        {(role === "faculty" || role === "admin") && (
+          <Link href="/admin/approvals" className="hover:text-emerald-200">
+            Approvals
+          </Link>
+        )}
+
+        {(role === "faculty" || role === "admin") && (
+          <Link href="/admin/jobs" className="hover:text-emerald-200">
+            Jobs
+          </Link>
+        )}
+      </nav>
+
+      <div className="flex items-center gap-3">
+        {role && (
+          <span className="rounded-full bg-emerald-700 px-3 py-1 text-sm">
+            Role: {role}
           </span>
-          <span className="text-gray-600 text-sm">{user.email}</span>
-          <Button variant="outline" onClick={handleSignOut}>
-            Sign out
-          </Button>
-        </>
-      ) : (
-        <Button onClick={handleSignIn} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-          Sign in
-        </Button>
-      )}
-    </div>
+        )}
+
+        {user ? (
+          <>
+            <span className="hidden sm:inline text-emerald-100">
+              {user.email ?? ""}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSignOut}
+              className="border-emerald-300 text-emerald-900 hover:bg-emerald-200"
+            >
+              Sign out
+            </Button>
+          </>
+        ) : (
+          <Link href="/login">
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-emerald-300 text-emerald-900 hover:bg-emerald-200"
+            >
+              Sign in
+            </Button>
+          </Link>
+        )}
+      </div>
+    </header>
   );
 }
