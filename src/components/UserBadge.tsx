@@ -3,6 +3,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 type Role = "student" | "faculty" | "company" | "admin" | null;
 
 export default function UserBadge() {
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [role, setRole] = useState<Role>(null);
 
@@ -38,23 +40,32 @@ export default function UserBadge() {
 
     load();
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async () => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async () => {
       if (!mounted) return;
       await load();
     });
 
     return () => {
       mounted = false;
-      sub.subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
   }, []);
 
   async function handleSignOut() {
-    await supabase.auth.signOut();
-    // reset local state and redirect home
-    setUser(null);
-    setRole(null);
-    window.location.href = "/";
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        // Surface the error in dev, but don’t block the UX.
+        console.error("Supabase signOut error:", error.message);
+      }
+    } finally {
+      // Clear local UI state immediately
+      setUser(null);
+      setRole(null);
+      // Navigate home and refresh header
+      router.replace("/");
+      router.refresh();
+    }
   }
 
   return (
@@ -100,6 +111,7 @@ export default function UserBadge() {
               {user.email ?? ""}
             </span>
             <Button
+              type="button"                 // <-- important
               variant="outline"
               size="sm"
               onClick={handleSignOut}
@@ -111,6 +123,7 @@ export default function UserBadge() {
         ) : (
           <Link href="/login">
             <Button
+              type="button"                 // <-- important
               variant="outline"
               size="sm"
               className="border-emerald-300 text-emerald-900 hover:bg-emerald-200"
