@@ -10,6 +10,29 @@ import { Button } from "@/components/ui/button";
 
 type Role = "student" | "faculty" | "company" | "admin" | null;
 
+function forceLocalLogout() {
+  try {
+    // Supabase stores the session in localStorage with keys like:
+    // "sb-<projectRef>-auth-token"
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith("sb-") && k.endsWith("-auth-token")) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // In case cookies were used by SSR helpers anywhere:
+  try {
+    document.cookie = "sb-access-token=; Max-Age=0; path=/";
+    document.cookie = "sb-refresh-token=; Max-Age=0; path=/";
+  } catch {
+    // ignore
+  }
+}
+
 export default function UserBadge() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
@@ -40,31 +63,45 @@ export default function UserBadge() {
 
     load();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange(async () => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (event) => {
+      // Useful to see in console what Supabase reports
+      console.log("[auth:onAuthStateChange]", event);
       if (!mounted) return;
       await load();
     });
 
     return () => {
       mounted = false;
-      authListener.subscription.unsubscribe();
+      sub.subscription.unsubscribe();
     };
   }, []);
 
   async function handleSignOut() {
+    console.log("[signout] clicking…");
     try {
-      const { error } = await supabase.auth.signOut();
+      // Global sign-out also revokes tokens server-side
+      const { error } = await supabase.auth.signOut({ scope: "global" });
       if (error) {
-        // Surface the error in dev, but don’t block the UX.
-        console.error("Supabase signOut error:", error.message);
+        console.warn("[signout] supabase error:", error.message);
       }
+    } catch (e) {
+      console.warn("[signout] exception:", e);
     } finally {
-      // Clear local UI state immediately
+      // Fallback: always clear local storage tokens
+      forceLocalLogout();
+
+      // Reset UI state immediately
       setUser(null);
       setRole(null);
-      // Navigate home and refresh header
+
+      // Navigate + refresh so the app re-renders in a logged-out state
       router.replace("/");
       router.refresh();
+
+      // Extra sanity check: report session state after signout
+      supabase.auth.getSession().then(({ data }) => {
+        console.log("[signout] post-session:", data.session);
+      });
     }
   }
 
@@ -111,7 +148,7 @@ export default function UserBadge() {
               {user.email ?? ""}
             </span>
             <Button
-              type="button"                 // <-- important
+              type="button"                 // never submit a form
               variant="outline"
               size="sm"
               onClick={handleSignOut}
@@ -123,7 +160,7 @@ export default function UserBadge() {
         ) : (
           <Link href="/login">
             <Button
-              type="button"                 // <-- important
+              type="button"
               variant="outline"
               size="sm"
               className="border-emerald-300 text-emerald-900 hover:bg-emerald-200"
