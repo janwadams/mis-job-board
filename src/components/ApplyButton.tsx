@@ -1,35 +1,39 @@
-'use client';
+// src/components/ApplyButton.tsx
+"use client";
 
-import { supabase } from '@/lib/supabaseClient';
-import { Button } from '@/components/ui/button';
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabaseClient";
 
-type Props = {
+type ApplyButtonProps = {
   postingId: string;
-  href: string;           // "mailto:hr@..." or "https://..."
-  label: string;          // "Email Recruiter" / "Visit Careers Page" / phone #
-  newTab?: boolean;       // for external URLs
-  variant?: 'default' | 'outline' | 'ghost' | 'secondary' | 'destructive' | null | undefined;
-  className?: string;
+  href: string;
+  label: string;
+  newTab?: boolean;
 };
 
-export default function ApplyButton({ postingId, href, label, newTab, variant, className }: Props) {
-  async function handleClick() {
-    // best-effort; we don't block the user if this fails
+export default function ApplyButton({
+  postingId,
+  href,
+  label,
+  newTab,
+}: ApplyButtonProps) {
+  async function clickAndGo() {
     try {
-      await supabase.rpc('increment_apply', { p_posting: postingId });
-    } catch (e) {
-      // ignore
+      // best-effort tracking; ignore failure
+      await supabase.rpc("increment_apply", { p_posting: postingId });
+    } catch {
+      /* noop */
     }
 
-    if (newTab) {
-      window.open(href, '_blank', 'noopener,noreferrer');
-    } else {
-      window.location.href = href;
-    }
+    if (newTab) window.open(href, "_blank", "noopener,noreferrer");
+    else window.location.href = href;
   }
 
   return (
-    <Button onClick={handleClick} variant={variant} className={className}>
+    <Button
+      onClick={clickAndGo}
+      className="rounded-xl bg-emerald-600 hover:bg-emerald-700"
+    >
       {label}
     </Button>
   );

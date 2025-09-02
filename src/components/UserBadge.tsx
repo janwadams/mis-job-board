@@ -1,50 +1,53 @@
+// src/components/UserBadge.tsx
 "use client";
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 
-interface Profile {
-  role: string | null;
-}
+type Role = "student" | "faculty" | "company" | "admin" | null;
 
 export default function UserBadge() {
-  const [user, setUser] = useState<any>(null);
-  const [role, setRole] = useState<string | null>(null);
+  const router = useRouter();
+  const [user, setUser] = useState<User | null>(null);
+  const [role, setRole] = useState<Role>(null);
 
   useEffect(() => {
-    // Check current session on mount
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session) {
-        setUser(data.session.user);
+    let mounted = true;
 
-        // try to pull role from profiles table if present
-        const { data: profile } = await supabase
+    async function load() {
+      const { data } = await supabase.auth.getUser();
+      if (!mounted) return;
+
+      const u = data.user ?? null;
+      setUser(u);
+
+      if (u) {
+        const { data: prof } = await supabase
           .from("profiles")
           .select("role")
-          .eq("id", data.session.user.id)
-          .single();
+          .eq("id", u.id)
+          .maybeSingle();
 
-        setRole(profile?.role ?? data.session.user.user_metadata.role ?? null);
-      }
-    });
-
-    // Listen for auth state changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        setRole(session.user.user_metadata.role ?? null);
+        setRole((prof?.role as Role) ?? null);
       } else {
-        setUser(null);
         setRole(null);
       }
+    }
+
+    load();
+
+    const { data: sub } = supabase.auth.onAuthStateChange(async () => {
+      if (!mounted) return;
+      await load();
     });
 
     return () => {
-      subscription.unsubscribe();
+      mounted = false;
+      sub.subscription.unsubscribe();
     };
   }, []);
 
@@ -77,11 +80,12 @@ export default function UserBadge() {
         {user ? (
           <div className="flex items-center gap-3">
             <span className="hidden sm:inline text-emerald-100 text-sm">
-              {user.email}
+              {user.email ?? ""}
             </span>
             <span className="text-xs bg-emerald-900 px-2 py-1 rounded-full">
               {role ?? "unknown"}
             </span>
+            {/* Use the dedicated /logout route */}
             <Link href="/logout">
               <Button
                 type="button"
