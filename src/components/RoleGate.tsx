@@ -1,71 +1,66 @@
-// src/components/RoleGate.tsx
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 type Role = "student" | "faculty" | "company" | "admin";
-
-export default function RoleGate({
-  allow,
-  children,
-}: {
+type Props = {
   allow: Role[];
   children: React.ReactNode;
-}) {
-  const router = useRouter();
-  const [ok, setOk] = useState<boolean | null>(null);
+};
+
+export default function RoleGate({ allow, children }: Props) {
+  const [role, setRole] = useState<Role | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    let alive = true;
+    let cancelled = false;
 
-    async function check() {
-      setOk(null);
-      const { data: { user } } = await supabase.auth.getUser();
+    async function load() {
+      try {
+        setLoading(true);
+        setErr(null);
 
-      if (!alive) return;
+        // 1) getSession first (SSR-safe on client)
+        const { data: sessData, error: sessErr } = await supabase.auth.getSession();
+        if (sessErr) throw sessErr;
 
-      // Not signed in → go to login
-      if (!user) {
-        setOk(false);
-        router.replace("/login");
-        return;
+        const user = sessData.session?.user;
+        if (!user) {
+          setRole(null);
+          return;
+        }
+
+        // 2) read the role from profiles (RLS must allow)
+        const { data, error } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        if (error) throw error;
+        const r = (data?.role ?? null) as Role | null;
+        setRole(r);
+      } catch (e: any) {
+        setErr(e?.message ?? "Failed to fetch role");
+        setRole(null);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
-
-      // Look up role
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (!alive) return;
-
-      if (error || !data?.role) {
-        setOk(false);
-        return;
-      }
-
-      const role = data.role as Role;
-      setOk(allow.includes(role));
     }
 
-    check();
-
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      if (!alive) return;
-      check();
-    });
-
+    load();
     return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
+      cancelled = true;
     };
-  }, [allow, router]);
+  }, []);
 
-  if (ok === null) return <p className="p-6 text-sm text-gray-600">Checking access…</p>;
-  if (!ok) return <p className="p-6 text-red-600">Not authorized.</p>;
+  if (loading) return <p className="px-4 py-2 text-sm text-gray-500">Checking access…</p>;
+  if (err) return <p className="px-4 py-2 text-sm text-red-600">Access error: {err}</p>;
+  if (!role || !allow.includes(role)) {
+    return <p className="px-4 py-2 text-sm text-gray-600">Access denied.</p>;
+  }
 
   return <>{children}</>;
 }
