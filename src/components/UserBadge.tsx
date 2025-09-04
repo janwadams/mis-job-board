@@ -8,6 +8,19 @@ import { Button } from "@/components/ui/button";
 
 type Role = "student" | "company" | "faculty" | "admin";
 
+function extractRole(row: unknown): Role | null {
+  // Runtime-safe narrowing without `any`
+  if (typeof row === "object" && row !== null && "role" in row) {
+    const r = (row as { role: unknown }).role;
+    if (typeof r === "string") {
+      if (r === "student" || r === "company" || r === "faculty" || r === "admin") {
+        return r;
+      }
+    }
+  }
+  return null;
+}
+
 export default function UserBadge() {
   const [email, setEmail] = useState<string | null>(null);
   const [role, setRole] = useState<Role | null>(null);
@@ -26,7 +39,7 @@ export default function UserBadge() {
 
       setEmail(user?.email ?? null);
 
-      // 2) read role from profiles (no generics, cast after)
+      // 2) read role from profiles (no generics, no `any`)
       if (user?.id) {
         const { data, error } = await supabase
           .from("profiles")
@@ -36,8 +49,8 @@ export default function UserBadge() {
 
         if (!alive) return;
 
-        if (!error && data && (data as any).role) {
-          setRole(((data as any).role as Role) ?? null);
+        if (!error && data) {
+          setRole(extractRole(data));
         } else {
           setRole(null);
         }
@@ -59,7 +72,7 @@ export default function UserBadge() {
   }, []);
 
   function handleSignOut() {
-    // Use a server route to sign out and redirect (avoids client hanging)
+    // Server route performs signOut + redirect
     window.location.href = "/logout";
   }
 
