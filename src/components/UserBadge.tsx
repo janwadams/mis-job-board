@@ -7,7 +7,6 @@ import { supabase } from "@/lib/supabaseClient";
 import { Button } from "@/components/ui/button";
 
 type Role = "student" | "company" | "faculty" | "admin";
-type ProfilesRow = { id: string; role: Role };
 
 export default function UserBadge() {
   const [email, setEmail] = useState<string | null>(null);
@@ -20,21 +19,28 @@ export default function UserBadge() {
     async function load() {
       setLoading(true);
 
+      // 1) current auth user
       const { data: auth } = await supabase.auth.getUser();
       const user = auth?.user ?? null;
       if (!alive) return;
 
       setEmail(user?.email ?? null);
 
+      // 2) read role from profiles (no generics, cast after)
       if (user?.id) {
-        const { data: prof } = await supabase
-          .from<ProfilesRow>("profiles")
+        const { data, error } = await supabase
+          .from("profiles")
           .select("id, role")
           .eq("id", user.id)
           .maybeSingle();
 
         if (!alive) return;
-        setRole(prof?.role ?? null);
+
+        if (!error && data && (data as any).role) {
+          setRole(((data as any).role as Role) ?? null);
+        } else {
+          setRole(null);
+        }
       } else {
         setRole(null);
       }
@@ -43,6 +49,8 @@ export default function UserBadge() {
     }
 
     load();
+
+    // also refresh when auth state changes (login/logout)
     const { data: sub } = supabase.auth.onAuthStateChange(() => load());
     return () => {
       alive = false;
@@ -51,7 +59,7 @@ export default function UserBadge() {
   }, []);
 
   function handleSignOut() {
-    // Use server route to sign out and redirect
+    // Use a server route to sign out and redirect (avoids client hanging)
     window.location.href = "/logout";
   }
 
@@ -68,16 +76,24 @@ export default function UserBadge() {
             <Link href="/" className="text-white/90 hover:text-white">
               Home
             </Link>
+
             {(role === "faculty" || role === "admin") && (
               <>
-                <Link href="/admin/approvals" className="text-white/90 hover:text-white">
+                <Link
+                  href="/admin/approvals"
+                  className="text-white/90 hover:text-white"
+                >
                   Approvals
                 </Link>
-                <Link href="/admin/jobs" className="text-white/90 hover:text-white">
+                <Link
+                  href="/admin/jobs"
+                  className="text-white/90 hover:text-white"
+                >
                   Jobs
                 </Link>
               </>
             )}
+
             {(role === "company" || role === "faculty" || role === "admin") && (
               <Link href="/post" className="text-white/90 hover:text-white">
                 Post a Job
@@ -96,6 +112,7 @@ export default function UserBadge() {
           {!loading && email && (
             <span className="hidden text-sm sm:inline-block">{email}</span>
           )}
+
           {email ? (
             <Button
               onClick={handleSignOut}
