@@ -1,46 +1,211 @@
-/* src/app/globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Tailwind v4 entry */
+@import "tailwindcss";
 
-/* UGA Theme Variables */
+/* ================================
+   UGA THEME VARIABLES
+   ================================ */
 :root {
-  --uga-red: #ba0c2f;
-  --uga-black: #000000;
-  --uga-white: #ffffff;
-  --uga-gray: #54565b;
-  --uga-light-gray: #f7f7f7;
+  --uga-red: #ba0c2f;        /* Bulldog Red */
+  --uga-black: #000000;      /* Arch Black */
+  --uga-white: #ffffff;      /* Chapel Bell White */
+  --uga-gray: #54565b;       /* Neutral Gray */
+  --uga-light-gray: #f7f7f7; /* App background */
 }
 
-html,
-body {
-  @apply min-h-screen bg-[var(--uga-light-gray)] text-[var(--uga-black)] antialiased;
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+/* ================================
+   GLOBAL BASE
+   ================================ */
+html, body {
+  min-height: 100%;
+  background: var(--uga-light-gray);
+  color: var(--uga-black);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji",
+    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
   line-height: 1.6;
+  margin: 0;
 }
 
-a { @apply text-[var(--uga-red)] hover:underline; }
+/* Remove default margins on headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--uga-black);
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
 
-h1, h2, h3, h4, h5, h6 { @apply font-bold text-[var(--uga-black)]; }
+/* Paragraph spacing */
+p {
+  margin: 0 0 0.75rem 0;
+}
 
-/* Buttons (fallback utility classes still work in JSX) */
-button, .btn {
-  @apply px-4 py-2 rounded-md font-medium transition-colors;
+/* Links use UGA Red */
+a {
+  color: var(--uga-red);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* Lists */
+ul, ol {
+  padding-left: 1.25rem;
+  margin: 0 0 0.75rem 0;
+}
+
+/* Images */
+img, svg, video, canvas {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ================================
+   SIMPLE BUTTON STYLES (OPTIONAL)
+   ================================ */
+button,
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.875rem;
+  border-radius: 0.5rem;
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 0.95rem;
+  line-height: 1.1;
+  cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease, opacity 120ms ease;
+  background-color: var(--uga-red);
+  color: var(--uga-white);
+}
+button:hover,
+.btn:hover {
+  background-color: #8b0a23; /* darker red */
+}
+button:disabled,
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Outline variant */
+.btn-outline {
+  background-color: transparent;
+  color: var(--uga-red);
+  border-color: var(--uga-red);
+}
+.btn-outline:hover {
   background-color: var(--uga-red);
   color: var(--uga-white);
 }
 
-button:hover, .btn:hover { background-color: #8b0a23; }
-
-.btn-outline {
-  background-color: transparent;
-  border: 2px solid var(--uga-red);
+/* Secondary (light) variant */
+.btn-light {
+  background-color: var(--uga-white);
   color: var(--uga-red);
+  border-color: var(--uga-red);
 }
-.btn-outline:hover { @apply bg-[var(--uga-red)] text-[var(--uga-white)]; }
+.btn-light:hover {
+  opacity: 0.9;
+}
 
-/* Optional card utility */
+/* ================================
+   CARD (OPTIONAL UTILITY)
+   ================================ */
 .card {
-  @apply rounded-lg border shadow-sm p-4 transition hover:shadow-md bg-[var(--uga-white)];
-  border-color: var(--uga-gray);
+  background: var(--uga-white);
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  padding: 1rem;
 }
+
+/* ================================
+   HEADER / NAVBAR HELPERS
+   ================================ */
+.header-uga {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  width: 100%;
+  background: var(--uga-red);
+  color: var(--uga-white);
+  border-bottom: 1px solid rgba(0,0,0,0.1);
+}
+
+.header-uga .inner {
+  max-width: 80rem;            /* ~1280px */
+  margin: 0 auto;
+  padding: 0.75rem 1rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-uga .brand {
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.header-uga nav a {
+  color: rgba(255,255,255,0.9);
+  margin-right: 1rem;
+}
+.header-uga nav a:last-child {
+  margin-right: 0;
+}
+.header-uga nav a:hover {
+  color: #fff;
+}
+
+/* ================================
+   FORM CONTROLS
+   ================================ */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="date"],
+select,
+textarea {
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: var(--uga-black);
+  outline: none;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--uga-red);
+  box-shadow: 0 0 0 3px rgba(186,12,47,0.15);
+}
+
+/* Label default */
+label {
+  display: block;
+  margin-bottom: 0.375rem;
+  font-weight: 600;
+  color: var(--uga-black);
+}
+
+/* ================================
+   UTILITIES (SAFE, NO @apply)
+   ================================ */
+.text-muted {
+  color: #6b7280; /* gray-500 */
+}
+.text-danger {
+  color: #dc2626; /* red-600 */
+}
+.bg-uga-red { background: var(--uga-red); }
+.text-uga-red { color: var(--uga-red); }
+.bg-uga-white { background: var(--uga-white); }
+.text-uga-white { color: var(--uga-white); }
+.bg-uga-black { background: var(--uga-black); }
+.text-uga-black { color: var(--uga-black); }

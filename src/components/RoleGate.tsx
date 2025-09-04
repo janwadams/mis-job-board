@@ -6,11 +6,6 @@ import { supabase } from "@/lib/supabaseClient";
 
 type Role = "student" | "company" | "faculty" | "admin";
 
-interface ProfilesRow {
-  id: string;
-  role: Role;
-}
-
 export default function RoleGate({
   allow,
   children,
@@ -20,7 +15,8 @@ export default function RoleGate({
   useEffect(() => {
     let alive = true;
 
-    (async () => {
+    async function check() {
+      // get user
       const { data: auth } = await supabase.auth.getUser();
       const userId = auth?.user?.id;
       if (!alive) return;
@@ -30,21 +26,26 @@ export default function RoleGate({
         return;
       }
 
-      const { data: prof, error } = await supabase
-        .from<ProfilesRow>("profiles")
+      // read role
+      const { data, error } = await supabase
+        .from("profiles")
         .select("id, role")
         .eq("id", userId)
         .maybeSingle();
 
       if (!alive) return;
 
-      if (error || !prof) {
+      if (error || !data) {
         setOk(false);
         return;
       }
 
-      setOk(allow.includes(prof.role));
-    })();
+      const role = (data.role ?? null) as Role | null;
+      setOk(role !== null && allow.includes(role));
+    }
+
+    setOk(null); // show "Checking access…" quickly
+    check();
 
     return () => {
       alive = false;
@@ -63,5 +64,6 @@ export default function RoleGate({
       </div>
     );
   }
+
   return <>{children}</>;
 }
