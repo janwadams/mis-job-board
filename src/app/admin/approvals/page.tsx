@@ -11,7 +11,7 @@ type PendingItem = {
   id: string;
   title: string;
   company: string;
-  deadline: string; // ISO date string
+  deadline: string; // ISO date
   status: "pending" | "approved" | "removed" | "withdrawn" | "archived";
 };
 

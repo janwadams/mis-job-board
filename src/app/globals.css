@@ -1,21 +1,17 @@
+/* src/app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ===================================
-   Root Theme Variables
-   =================================== */
+/* UGA Theme Variables */
 :root {
-  --uga-red: #ba0c2f;       /* Bulldog Red */
-  --uga-black: #000000;     /* Arch Black */
-  --uga-white: #ffffff;     /* Chapel Bell White */
-  --uga-gray: #54565b;      /* Neutral Gray */
+  --uga-red: #ba0c2f;
+  --uga-black: #000000;
+  --uga-white: #ffffff;
+  --uga-gray: #54565b;
   --uga-light-gray: #f7f7f7;
 }
 
-/* ===================================
-   Global Base Styles
-   =================================== */
 html,
 body {
   @apply min-h-screen bg-[var(--uga-light-gray)] text-[var(--uga-black)] antialiased;
@@ -23,83 +19,28 @@ body {
   line-height: 1.6;
 }
 
-/* ===================================
-   Links
-   =================================== */
-a {
-  @apply text-[var(--uga-red)] hover:underline;
-}
+a { @apply text-[var(--uga-red)] hover:underline; }
 
-/* ===================================
-   Headings
-   =================================== */
-h1, h2, h3, h4, h5, h6 {
-  @apply font-bold text-[var(--uga-black)];
-}
+h1, h2, h3, h4, h5, h6 { @apply font-bold text-[var(--uga-black)]; }
 
-/* ===================================
-   Buttons
-   =================================== */
+/* Buttons (fallback utility classes still work in JSX) */
 button, .btn {
   @apply px-4 py-2 rounded-md font-medium transition-colors;
   background-color: var(--uga-red);
   color: var(--uga-white);
 }
 
-button:hover, .btn:hover {
-  background-color: #8b0a23; /* Darker red on hover */
-}
+button:hover, .btn:hover { background-color: #8b0a23; }
 
-/* Outline buttons */
 .btn-outline {
   background-color: transparent;
   border: 2px solid var(--uga-red);
   color: var(--uga-red);
 }
+.btn-outline:hover { @apply bg-[var(--uga-red)] text-[var(--uga-white)]; }
 
-.btn-outline:hover {
-  @apply bg-[var(--uga-red)] text-[var(--uga-white)];
-}
-
-/* ===================================
-   Navbar
-   =================================== */
-.navbar {
-  @apply flex items-center justify-between px-6 py-3;
-  background-color: var(--uga-black);
-  color: var(--uga-white);
-}
-
-.navbar a {
-  @apply mx-2 font-medium;
-  color: var(--uga-white);
-}
-
-.navbar a:hover {
-  color: var(--uga-red);
-}
-
-/* ===================================
-   Cards
-   =================================== */
+/* Optional card utility */
 .card {
-  @apply rounded-lg border shadow-sm p-4 transition hover:shadow-md;
-  background-color: var(--uga-white);
+  @apply rounded-lg border shadow-sm p-4 transition hover:shadow-md bg-[var(--uga-white)];
   border-color: var(--uga-gray);
-}
-
-.card h2 {
-  @apply text-lg font-semibold text-[var(--uga-black)];
-}
-
-/* ===================================
-   Forms
-   =================================== */
-input, select, textarea {
-  @apply w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-[var(--uga-red)];
-  border-color: var(--uga-gray);
-}
-
-label {
-  @apply block mb-1 font-medium text-[var(--uga-black)];
 }

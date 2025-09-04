@@ -80,8 +80,6 @@ function JobsInner() {
               Faculty and admins can archive or remove postings.
             </p>
           </div>
-          {/* Link to edit page (optional per job) – leaving here as a hint */}
-          {/* <Link href="/admin/jobs/new" className="text-sm underline">New Job</Link> */}
         </div>
 
         {err && (
