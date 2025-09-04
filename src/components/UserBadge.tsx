@@ -1,106 +1,97 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
-type Role = "student" | "faculty" | "company" | "admin";
+type Profile = {
+  role: "student" | "faculty" | "admin" | "company";
+  email: string;
+};
 
 export default function UserBadge() {
-  const [email, setEmail] = useState<string | null>(null);
-  const [role, setRole] = useState<Role | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
-    let cancelled = false;
-
-    async function fetchUser() {
-      const { data: sess } = await supabase.auth.getSession();
-      const user = sess.session?.user ?? null;
+    async function loadProfile() {
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        if (!cancelled) {
-          setEmail(null);
-          setRole(null);
-        }
+        setProfile(null);
+        setLoading(false);
         return;
       }
 
+      // fetch role from profiles table
       const { data, error } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, email")
         .eq("id", user.id)
-        .maybeSingle();
+        .single();
 
-      if (!cancelled) {
-        setEmail(user.email ?? null);
-        setRole((data?.role as Role | undefined) ?? null);
+      if (!error && data) {
+        setProfile({
+          role: data.role as Profile["role"],
+          email: data.email,
+        });
+      } else {
+        setProfile({ role: "student", email: user.email ?? "" });
       }
+      setLoading(false);
     }
 
-    fetchUser();
-
-    const { data: sub } = supabase.auth.onAuthStateChange(() => fetchUser());
-    return () => {
-      sub.subscription.unsubscribe();
-      cancelled = true;
-    };
+    loadProfile();
   }, []);
 
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    router.push("/login"); // redirect after logout
+  }
+
   return (
-    <header className="bg-emerald-800 text-white">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href="/" className="font-semibold">MIS Job Board</Link>
-          <NavLink href="/">Home</NavLink>
-
-          {/* Show Approvals/Post/Jobs for higher roles */}
-          {role && (role === "faculty" || role === "admin") && (
-            <>
-              <NavLink href="/admin/approvals">Approvals</NavLink>
-              <NavLink href="/admin/jobs">Jobs</NavLink>
-            </>
+    <header className="navbar">
+      {/* Left: Site title */}
+      <div className="flex items-center space-x-4">
+        <span className="text-xl font-bold text-[var(--uga-red)]">
+          MIS Job Board
+        </span>
+        <nav className="flex space-x-4">
+          <a href="/">Home</a>
+          {(profile?.role === "faculty" || profile?.role === "admin") && (
+            <a href="/admin/approvals">Approvals</a>
           )}
-          {role && (role === "company" || role === "faculty" || role === "admin") && (
-            <NavLink href="/post">Post a Job</NavLink>
+          {(profile?.role === "faculty" || profile?.role === "admin") && (
+            <a href="/admin/jobs">Jobs</a>
           )}
-        </div>
+          {(profile?.role === "company" || profile?.role === "faculty" || profile?.role === "admin") && (
+            <a href="/post">Post a Job</a>
+          )}
+        </nav>
+      </div>
 
-        <div className="flex items-center gap-3">
-          {role && (
-            <span className="rounded-full bg-emerald-700 px-3 py-1 text-sm">
-              Role: {role}
+      {/* Right: User info */}
+      <div className="flex items-center space-x-3">
+        {!loading && profile && (
+          <>
+            <span className="px-2 py-1 rounded-md bg-[var(--uga-red)] text-[var(--uga-white)] text-xs font-medium">
+              Role: {profile.role}
             </span>
-          )}
-          {email ? (
-            <>
-              <span className="text-sm opacity-90">{email}</span>
-              <Link
-                href="/logout"
-                className="bg-white text-emerald-800 rounded-lg px-3 py-1 text-sm font-medium hover:bg-emerald-50"
-              >
-                Sign out
-              </Link>
-            </>
-          ) : (
-            <Link
-              href="/login"
-              className="bg-white text-emerald-800 rounded-lg px-3 py-1 text-sm font-medium hover:bg-emerald-50"
+            <span className="text-sm">{profile.email}</span>
+            <button
+              onClick={handleSignOut}
+              className="btn-outline"
             >
-              Sign in
-            </Link>
-          )}
-        </div>
+              Sign out
+            </button>
+          </>
+        )}
+        {!loading && !profile && (
+          <a href="/login" className="btn">
+            Sign in
+          </a>
+        )}
       </div>
     </header>
-  );
-}
-
-function NavLink({ href, children }: { href: string; children: React.ReactNode }) {
-  return (
-    <Link
-      href={href}
-      className="text-white/90 hover:text-white transition-colors text-sm"
-    >
-      {children}
-    </Link>
   );
 }
