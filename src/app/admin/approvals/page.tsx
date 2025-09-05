@@ -1,44 +1,40 @@
-// src/app/admin/approvals/page.tsx
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import RoleGate from "@/components/RoleGate";
 import { supabase } from "@/lib/supabaseClient";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 
 type PendingItem = {
   id: string;
   title: string;
   company: string;
-  deadline: string; // ISO date
+  deadline: string;
   status: "pending" | "approved" | "removed" | "withdrawn" | "archived";
 };
 
-function ApprovalsInner() {
+export default function ApprovalsPage() {
   const [rows, setRows] = useState<PendingItem[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
+  async function load() {
     setErr(null);
+    setLoading(true);
     const { data, error } = await supabase
       .from("postings")
       .select("id,title,company,deadline,status")
       .eq("status", "pending")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      setErr(error.message);
-      setRows([]);
-      return;
-    }
-    setRows((data as PendingItem[]) ?? []);
-  }, []);
+    if (error) setErr(error.message);
+    setRows((data ?? []) as PendingItem[]);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    load();
+  }, []);
 
   async function approve(id: string) {
     setBusyId(id);
@@ -48,10 +44,10 @@ function ApprovalsInner() {
       .eq("id", id);
     setBusyId(null);
     if (error) {
-      alert(error.message);
+      setErr(error.message);
       return;
     }
-    void load();
+    load();
   }
 
   async function reject(id: string) {
@@ -62,74 +58,72 @@ function ApprovalsInner() {
       .eq("id", id);
     setBusyId(null);
     if (error) {
-      alert(error.message);
+      setErr(error.message);
       return;
     }
-    void load();
+    load();
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
-      <section className="mx-auto max-w-5xl px-6 py-10">
-        <h1 className="mb-3 text-2xl font-semibold text-emerald-900">
-          Pending Approvals
-        </h1>
-        <p className="mb-6 text-sm text-gray-600">
-          Faculty and admins can approve or reject submissions. Approved posts
-          become visible to students immediately.
-        </p>
-
-        {err && (
-          <Card className="mb-4 border-red-200 bg-red-50">
-            <CardContent className="p-4 text-red-700">{err}</CardContent>
-          </Card>
-        )}
-
-        <div className="grid gap-4">
-          {rows.map((p) => (
-            <Card key={p.id} className="rounded-2xl border-emerald-200">
-              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
-                <div>
-                  <div className="text-lg font-semibold text-emerald-900">
-                    {p.title}
-                  </div>
-                  <div className="text-sm text-emerald-700">
-                    {p.company} • Due{" "}
-                    {new Date(p.deadline).toLocaleDateString()}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    onClick={() => approve(p.id)}
-                    disabled={busyId === p.id}
-                    className="bg-emerald-600 hover:bg-emerald-700"
-                  >
-                    {busyId === p.id ? "Working…" : "Approve"}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={() => reject(p.id)}
-                    disabled={busyId === p.id}
-                  >
-                    Reject
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {!rows.length && !err && (
-            <p className="text-gray-600">No pending postings.</p>
-          )}
-        </div>
-      </section>
-    </main>
-  );
-}
-
-export default function ApprovalsPage() {
-  return (
     <RoleGate allow={["faculty", "admin"]}>
-      <ApprovalsInner />
+      <main className="min-h-screen bg-uga-cream">
+        {/* Banner */}
+        <section className="bg-uga-red text-white">
+          <div className="mx-auto max-w-6xl px-6 py-8">
+            <h1 className="text-2xl font-bold">Pending Approvals</h1>
+            <p className="mt-1 text-white/90">
+              Review company/faculty submissions. Approve to publish, or reject to remove.
+            </p>
+          </div>
+        </section>
+
+        {/* List */}
+        <section className="mx-auto max-w-6xl px-6 py-8">
+          {err && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-white p-4 text-red-700">
+              {err}
+            </div>
+          )}
+
+          {loading ? (
+            <p className="text-gray-600">Loading…</p>
+          ) : rows.length === 0 ? (
+            <p className="text-gray-600">No pending postings.</p>
+          ) : (
+            <div className="grid gap-4">
+              {rows.map((p) => (
+                <article
+                  key={p.id}
+                  className="card flex flex-wrap items-center justify-between gap-4"
+                >
+                  <div>
+                    <div className="text-lg font-semibold text-uga-black">{p.title}</div>
+                    <div className="text-sm text-gray-600">
+                      {p.company} • Deadline: {new Date(p.deadline).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => approve(p.id)}
+                      disabled={busyId === p.id}
+                      className="btn-primary"
+                    >
+                      {busyId === p.id ? "Working…" : "Approve"}
+                    </button>
+                    <button
+                      onClick={() => reject(p.id)}
+                      disabled={busyId === p.id}
+                      className="btn-secondary"
+                    >
+                      Reject
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
     </RoleGate>
   );
 }

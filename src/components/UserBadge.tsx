@@ -1,148 +1,85 @@
-// src/components/UserBadge.tsx
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabaseClient";
-import { Button } from "@/components/ui/button";
 
-type Role = "student" | "company" | "faculty" | "admin";
-
-function extractRole(row: unknown): Role | null {
-  // Runtime-safe narrowing without `any`
-  if (typeof row === "object" && row !== null && "role" in row) {
-    const r = (row as { role: unknown }).role;
-    if (typeof r === "string") {
-      if (r === "student" || r === "company" || r === "faculty" || r === "admin") {
-        return r;
-      }
-    }
-  }
-  return null;
-}
+type Profile = {
+  role: string | null;
+};
 
 export default function UserBadge() {
   const [email, setEmail] = useState<string | null>(null);
-  const [role, setRole] = useState<Role | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<string | null>(null);
 
   useEffect(() => {
-    let alive = true;
-
     async function load() {
-      setLoading(true);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      // 1) current auth user
-      const { data: auth } = await supabase.auth.getUser();
-      const user = auth?.user ?? null;
-      if (!alive) return;
+      if (user) {
+        setEmail(user.email);
 
-      setEmail(user?.email ?? null);
-
-      // 2) read role from profiles (no generics, no `any`)
-      if (user?.id) {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id, role")
+        const { data: prof } = await supabase
+          .from<Profile>("profiles")
+          .select("role")
           .eq("id", user.id)
           .maybeSingle();
 
-        if (!alive) return;
-
-        if (!error && data) {
-          setRole(extractRole(data));
-        } else {
-          setRole(null);
-        }
-      } else {
-        setRole(null);
+        setRole(prof?.role ?? null);
       }
-
-      setLoading(false);
     }
-
     load();
-
-    // also refresh when auth state changes (login/logout)
-    const { data: sub } = supabase.auth.onAuthStateChange(() => load());
-    return () => {
-      alive = false;
-      sub.subscription.unsubscribe();
-    };
   }, []);
 
-  function handleSignOut() {
-    // Server route performs signOut + redirect
-    window.location.href = "/logout";
+  async function signOut() {
+    await supabase.auth.signOut();
+    window.location.href = "/login"; // redirect to login
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-black/10 bg-[#BA0C2F] text-white">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-3">
-        {/* Brand + left nav */}
+    <header className="bg-uga-red text-white">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+        {/* Left: Site title + nav links */}
         <div className="flex items-center gap-6">
-          <Link href="/" className="text-lg font-semibold tracking-wide">
+          <Link href="/" className="font-bold text-lg text-white">
             MIS Job Board
           </Link>
-
-          <nav className="hidden items-center gap-4 sm:flex">
-            <Link href="/" className="text-white/90 hover:text-white">
+          <nav className="flex gap-4">
+            <Link href="/" className="text-white hover:underline">
               Home
             </Link>
-
             {(role === "faculty" || role === "admin") && (
-              <>
-                <Link
-                  href="/admin/approvals"
-                  className="text-white/90 hover:text-white"
-                >
-                  Approvals
-                </Link>
-                <Link
-                  href="/admin/jobs"
-                  className="text-white/90 hover:text-white"
-                >
-                  Jobs
-                </Link>
-              </>
+              <Link href="/admin/approvals" className="text-white hover:underline">
+                Approvals
+              </Link>
             )}
-
             {(role === "company" || role === "faculty" || role === "admin") && (
-              <Link href="/post" className="text-white/90 hover:text-white">
+              <Link href="/post" className="text-white hover:underline">
                 Post a Job
+              </Link>
+            )}
+            {(role === "faculty" || role === "admin") && (
+              <Link href="/admin/jobs" className="text-white hover:underline">
+                Jobs
               </Link>
             )}
           </nav>
         </div>
 
-        {/* Right side */}
-        <div className="flex items-center gap-3">
-          {!loading && role && (
-            <span className="rounded-full bg-white/15 px-3 py-1 text-sm">
-              Role: <span className="font-medium">{role}</span>
+        {/* Right: Role + email + sign out */}
+        <div className="flex items-center gap-4">
+          {role && (
+            <span className="rounded-full bg-white px-3 py-1 text-sm font-medium text-uga-red">
+              Role: {role}
             </span>
           )}
-          {!loading && email && (
-            <span className="hidden text-sm sm:inline-block">{email}</span>
-          )}
-
-          {email ? (
-            <Button
-              onClick={handleSignOut}
-              variant="secondary"
-              className="bg-white text-[#BA0C2F] hover:bg-white/90"
-            >
+          {email && <span className="text-sm">{email}</span>}
+          {email && (
+            <button onClick={signOut} className="btn-primary">
               Sign out
-            </Button>
-          ) : (
-            <Link href="/login">
-              <Button
-                variant="secondary"
-                className="bg-white text-[#BA0C2F] hover:bg-white/90"
-              >
-                Sign in
-              </Button>
-            </Link>
+            </button>
           )}
         </div>
       </div>

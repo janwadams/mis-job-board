@@ -1,151 +1,159 @@
-// src/app/admin/jobs/page.tsx
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import RoleGate from "@/components/RoleGate";
 import { supabase } from "@/lib/supabaseClient";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
-type Job = {
+type Status = "pending" | "approved" | "removed" | "withdrawn" | "archived";
+
+type JobRow = {
   id: string;
   title: string;
   company: string;
-  deadline: string; // ISO
-  status: "pending" | "approved" | "removed" | "withdrawn" | "archived";
+  status: Status;
+  deadline: string;
+  job_type: "Internship" | "Full-time" | "Contract";
 };
 
-function JobsInner() {
-  const [rows, setRows] = useState<Job[]>([]);
+export default function JobsAdminPage() {
+  const [rows, setRows] = useState<JobRow[]>([]);
   const [err, setErr] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<Status | "all">("all");
 
-  const load = useCallback(async () => {
+  async function load() {
     setErr(null);
+    setLoading(true);
     const { data, error } = await supabase
       .from("postings")
-      .select("id,title,company,deadline,status")
+      .select("id,title,company,status,deadline,job_type")
       .order("created_at", { ascending: false });
 
-    if (error) {
-      setErr(error.message);
-      setRows([]);
-      return;
-    }
-    setRows((data as Job[]) ?? []);
-  }, []);
+    if (error) setErr(error.message);
+    setRows((data ?? []) as JobRow[]);
+    setLoading(false);
+  }
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    load();
+  }, []);
 
-  async function archive(id: string) {
+  const visible = useMemo(() => {
+    if (filter === "all") return rows;
+    return rows.filter((r) => r.status === filter);
+  }, [rows, filter]);
+
+  async function setStatus(id: string, status: Status) {
     setBusyId(id);
-    const { error } = await supabase
-      .from("postings")
-      .update({ status: "archived" })
-      .eq("id", id);
+    const { error } = await supabase.from("postings").update({ status }).eq("id", id);
     setBusyId(null);
     if (error) {
-      alert(error.message);
+      setErr(error.message);
       return;
     }
-    void load();
+    load();
   }
 
-  async function remove(id: string) {
-    setBusyId(id);
-    const { error } = await supabase
-      .from("postings")
-      .update({ status: "removed" })
-      .eq("id", id);
-    setBusyId(null);
-    if (error) {
-      alert(error.message);
-      return;
-    }
-    void load();
-  }
-
-  return (
-    <main className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
-      <section className="mx-auto max-w-5xl px-6 py-10">
-        <div className="mb-6 flex items-end justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-emerald-900">
-              Manage Jobs
-            </h1>
-            <p className="text-sm text-gray-600">
-              Faculty and admins can archive or remove postings.
-            </p>
-          </div>
-        </div>
-
-        {err && (
-          <Card className="mb-4 border-red-200 bg-red-50">
-            <CardContent className="p-4 text-red-700">{err}</CardContent>
-          </Card>
-        )}
-
-        <div className="grid gap-4">
-          {rows.map((p) => (
-            <Card key={p.id} className="rounded-2xl border-emerald-200">
-              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
-                <div>
-                  <div className="text-lg font-semibold text-emerald-900">
-                    {p.title}
-                  </div>
-                  <div className="text-sm text-emerald-700">
-                    {p.company} • Due{" "}
-                    {new Date(p.deadline).toLocaleDateString()} •{" "}
-                    <span className="uppercase">{p.status}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Link
-                    href={`/jobs/${p.id}`}
-                    className="text-sm underline text-emerald-700 hover:text-emerald-900"
-                  >
-                    View
-                  </Link>
-                  {p.status !== "archived" && (
-                    <Button
-                      variant="outline"
-                      onClick={() => archive(p.id)}
-                      disabled={busyId === p.id}
-                    >
-                      {busyId === p.id ? "Working…" : "Archive"}
-                    </Button>
-                  )}
-                  {p.status !== "removed" && (
-                    <Button
-                      variant="outline"
-                      onClick={() => remove(p.id)}
-                      disabled={busyId === p.id}
-                      className="text-red-600 hover:bg-red-50"
-                    >
-                      {busyId === p.id ? "Working…" : "Remove"}
-                    </Button>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-          {!rows.length && !err && (
-            <p className="text-gray-600">No job postings found.</p>
-          )}
-        </div>
-      </section>
-    </main>
-  );
-}
-
-export default function JobsAdminPage() {
   return (
     <RoleGate allow={["faculty", "admin"]}>
-      <JobsInner />
+      <main className="min-h-screen bg-uga-cream">
+        {/* Banner */}
+        <section className="bg-uga-red text-white">
+          <div className="mx-auto max-w-6xl px-6 py-8">
+            <h1 className="text-2xl font-bold">Manage Jobs</h1>
+            <p className="mt-1 text-white/90">
+              View and manage all postings. Filter by status; approve, remove, or restore.
+            </p>
+          </div>
+        </section>
+
+        {/* Controls */}
+        <section className="mx-auto max-w-6xl px-6 py-6">
+          {err && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-white p-4 text-red-700">
+              {err}
+            </div>
+          )}
+
+          <div className="mb-4 flex flex-wrap items-center gap-3">
+            <label className="text-sm font-semibold text-uga-black">Filter:</label>
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value as Status | "all")}
+              className="rounded-md border px-3 py-2"
+            >
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="removed">Removed</option>
+              <option value="withdrawn">Withdrawn</option>
+              <option value="archived">Archived</option>
+            </select>
+
+            <button onClick={load} className="btn-secondary">
+              Refresh
+            </button>
+          </div>
+
+          {/* List */}
+          {loading ? (
+            <p className="text-gray-600">Loading…</p>
+          ) : visible.length === 0 ? (
+            <p className="text-gray-600">No postings for this filter.</p>
+          ) : (
+            <div className="grid gap-4">
+              {visible.map((p) => (
+                <article
+                  key={p.id}
+                  className="card flex flex-wrap items-center justify-between gap-4"
+                >
+                  <div>
+                    <div className="text-lg font-semibold text-uga-black">{p.title}</div>
+                    <div className="text-sm text-gray-600">
+                      {p.company} • {p.job_type} • Deadline:{" "}
+                      {new Date(p.deadline).toLocaleDateString()}
+                    </div>
+                    <div className="mt-1 text-xs uppercase tracking-wide text-gray-500">
+                      Status: {p.status}
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {p.status !== "approved" && (
+                      <button
+                        onClick={() => setStatus(p.id, "approved")}
+                        disabled={busyId === p.id}
+                        className="btn-primary"
+                      >
+                        {busyId === p.id ? "Working…" : "Approve"}
+                      </button>
+                    )}
+                    {p.status !== "removed" && (
+                      <button
+                        onClick={() => setStatus(p.id, "removed")}
+                        disabled={busyId === p.id}
+                        className="btn-secondary"
+                      >
+                        Remove
+                      </button>
+                    )}
+                    {p.status === "removed" && (
+                      <button
+                        onClick={() => setStatus(p.id, "pending")}
+                        disabled={busyId === p.id}
+                        className="btn-secondary"
+                      >
+                        Restore to Pending
+                      </button>
+                    )}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      </main>
     </RoleGate>
   );
 }

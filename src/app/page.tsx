@@ -1,109 +1,108 @@
-// src/app/page.tsx
+"use client";
+
+import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
 
-type SearchParams = {
-  q?: string;
-  job?: "Internship" | "Full-time" | "Contract" | "all";
-  company?: string;
+type Posting = {
+  id: string;
+  title: string;
+  company: string;
+  status: string;
+  deadline: string;
+  description?: string;
 };
 
-export default async function Home({ searchParams }: { searchParams: SearchParams }) {
-  const q = (searchParams?.q ?? "").trim();
-  const job = (searchParams?.job ?? "all") as SearchParams["job"];
-  const company = (searchParams?.company ?? "").trim();
+export default function HomePage() {
+  const [postings, setPostings] = useState<Posting[]>([]);
+  const [search, setSearch] = useState("");
 
-  let query = supabase
-    .from("postings")
-    .select("id,title,company,job_type,description,deadline,application_method,application_value")
-    .eq("status", "approved")
-    .gte("deadline", new Date().toISOString().slice(0, 10))
-    .order("created_at", { ascending: false });
+  useEffect(() => {
+    load();
+  }, []);
 
-  if (q) query = query.or(`title.ilike.%${q}%,company.ilike.%${q}%`);
-  if (job && job !== "all") query = query.eq("job_type", job);
-  if (company) query = query.ilike("company", `%${company}%`);
+  async function load() {
+    const { data, error } = await supabase
+      .from("postings")
+      .select("*")
+      .eq("status", "approved")
+      .order("created_at", { ascending: false });
 
-  const { data: rows, error } = await query;
+    if (!error && data) {
+      setPostings(data);
+    }
+  }
+
+  const filtered = postings.filter(
+    (p) =>
+      p.title.toLowerCase().includes(search.toLowerCase()) ||
+      p.company.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-emerald-50 to-white">
-      <section className="mx-auto max-w-6xl px-6 py-10">
-        <div className="rounded-3xl bg-emerald-800 p-8 text-white shadow-lg">
+    <main className="min-h-screen bg-gray-50">
+      {/* Hero */}
+      <section className="bg-uga-dark text-white py-12">
+        <div className="mx-auto max-w-5xl px-6">
           <h1 className="text-3xl font-bold">MIS Student Job Board</h1>
-          <p className="mt-2 text-emerald-100">Browse internships & full-time roles curated for MIS students.</p>
-
-          <form className="mt-6 grid gap-3 md:grid-cols-[1fr_200px_240px_120px]">
-            <Input name="q" placeholder="Search jobs…" defaultValue={q} className="bg-white/95 text-emerald-900" />
-            <Select name="job" defaultValue={job ?? "all"}>
-              <SelectTrigger className="bg-white/95 text-emerald-900">
-                <SelectValue placeholder="Job Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All types</SelectItem>
-                <SelectItem value="Internship">Internship</SelectItem>
-                <SelectItem value="Full-time">Full-Time</SelectItem>
-                <SelectItem value="Contract">Contract</SelectItem>
-              </SelectContent>
-            </Select>
-            <Input name="company" placeholder="Company" defaultValue={company} className="bg-white/95 text-emerald-900" />
-            <Button type="submit" className="bg-white text-emerald-900 hover:bg-emerald-100">Search</Button>
-          </form>
+          <p className="mt-2 text-gray-200">
+            Browse internships & full-time roles curated for MIS students.
+          </p>
+          <div className="mt-6 flex gap-2">
+            <input
+              type="text"
+              placeholder="Search jobs..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full rounded-md px-4 py-2 text-black"
+            />
+            <Button className="btn-primary">Search</Button>
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-6 pb-16">
-        <h2 className="mb-4 text-xl font-semibold text-emerald-900">Open Roles</h2>
+      {/* Job cards */}
+      <section className="mx-auto max-w-5xl px-6 py-10">
+        <h2 className="mb-6 text-xl font-semibold text-uga-dark">Open Roles</h2>
 
-        {error && <p className="mb-4 text-red-600">Error loading jobs: {error.message}</p>}
-
-        <div className="grid gap-6 md:grid-cols-2">
-          {(rows ?? []).map((r) => (
-            <Card key={r.id} className="rounded-2xl border-emerald-200 shadow-sm">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold text-emerald-900">{r.title}</h3>
-                <p className="text-emerald-700">
-                  {r.company} • {r.job_type} • Deadline: {new Date(r.deadline).toLocaleDateString()}
+        <div className="grid gap-6 sm:grid-cols-2">
+          {filtered.map((job) => (
+            <div
+              key={job.id}
+              className="rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow"
+            >
+              <div className="p-5">
+                <h3 className="text-lg font-semibold text-uga-dark">{job.title}</h3>
+                <p className="text-sm text-gray-600">
+                  {job.company} • Deadline:{" "}
+                  {new Date(job.deadline).toLocaleDateString()}
                 </p>
-                {r.description && <p className="mt-2 text-sm text-emerald-800 line-clamp-3">{r.description}</p>}
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <Link href={`/jobs/${r.id}`}>
-                    <Button variant="outline" className="rounded-xl">View Details</Button>
-                  </Link>
-                  {r.application_method === "email" && (
-                    <a href={`mailto:${r.application_value}`}>
-                      <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700">Email Recruiter</Button>
-                    </a>
-                  )}
-                  {r.application_method === "url" && (
-                    <a href={r.application_value} target="_blank" rel="noreferrer">
-                      <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700">Visit Careers Page</Button>
-                    </a>
-                  )}
-                  {r.application_method === "phone" && (
-                    <a href={`tel:${r.application_value}`}>
-                      <Button className="rounded-xl bg-emerald-600 hover:bg-emerald-700">Call Recruiter</Button>
-                    </a>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                {job.description && (
+                  <p className="mt-2 text-sm text-gray-700">{job.description}</p>
+                )}
 
-        {!error && (!rows || rows.length === 0) && (
-          <p className="text-emerald-700">No jobs match your filters.</p>
-        )}
+                <div className="mt-4 flex gap-3">
+                  <Link href={`/jobs/${job.id}`}>
+                    <Button className="btn-secondary">View Details</Button>
+                  </Link>
+                  <a
+                    href="#"
+                    onClick={() =>
+                      window.open("mailto:recruiter@" + job.company.toLowerCase() + ".com")
+                    }
+                  >
+                    <Button className="btn-primary">Apply</Button>
+                  </a>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {!filtered.length && (
+            <p className="text-gray-500">No roles match your search.</p>
+          )}
+        </div>
       </section>
     </main>
   );
