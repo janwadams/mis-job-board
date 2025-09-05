@@ -1,109 +1,138 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import { Button } from "@/components/ui/button";
-import Link from "next/link";
 
 type Posting = {
   id: string;
   title: string;
   company: string;
-  status: string;
-  deadline: string;
-  description?: string;
+  deadline: string | null;
+  summary?: string | null;      // optional short description
+  apply_url?: string | null;    // optional external link
 };
 
 export default function HomePage() {
-  const [postings, setPostings] = useState<Posting[]>([]);
-  const [search, setSearch] = useState("");
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<Posting[]>([]);
+  const [q, setQ] = useState("");
 
+  // 1) Redirect to /login if not signed in
   useEffect(() => {
-    load();
+    (async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) {
+        router.replace("/login");
+        return;
+      }
+      // If signed in, load the approved postings
+      await loadApproved();
+      setLoading(false);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function load() {
+  async function loadApproved() {
     const { data, error } = await supabase
       .from("postings")
-      .select("*")
+      .select("id,title,company,deadline,summary,apply_url,status")
       .eq("status", "approved")
       .order("created_at", { ascending: false });
 
-    if (!error && data) {
-      setPostings(data);
+    if (!error && data) setRows(data as Posting[]);
+  }
+
+  // simple client-side filter (since search isn’t wired to DB yet)
+  const filtered = rows.filter((p) => {
+    const needle = q.trim().toLowerCase();
+    if (!needle) return true;
+    return (
+      p.title.toLowerCase().includes(needle) ||
+      p.company.toLowerCase().includes(needle)
+    );
+  });
+
+  function onApply(p: Posting) {
+    if (p.apply_url) {
+      window.open(p.apply_url, "_blank");
+    } else {
+      alert("No application URL provided for this posting.");
     }
   }
 
-  const filtered = postings.filter(
-    (p) =>
-      p.title.toLowerCase().includes(search.toLowerCase()) ||
-      p.company.toLowerCase().includes(search.toLowerCase())
-  );
+  if (loading) {
+    return (
+      <main className="page">
+        <div className="container">
+          <p>Loading…</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
-    <main className="min-h-screen bg-gray-50">
-      {/* Hero */}
-      <section className="bg-uga-dark text-white py-12">
-        <div className="mx-auto max-w-5xl px-6">
-          <h1 className="text-3xl font-bold">MIS Student Job Board</h1>
-          <p className="mt-2 text-gray-200">
-            Browse internships & full-time roles curated for MIS students.
+    <main className="page">
+      <div className="container">
+        {/* Hero / search header */}
+        <section className="hero">
+          <h1 className="h1">MIS Student Job Board</h1>
+          <p className="muted">
+            Browse internships &amp; full-time roles curated for MIS students.
           </p>
-          <div className="mt-6 flex gap-2">
+
+          <form
+            className="search-row"
+            onSubmit={(e) => {
+              e.preventDefault();
+            }}
+          >
             <input
-              type="text"
-              placeholder="Search jobs..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-md px-4 py-2 text-black"
+              className="input"
+              placeholder="Search jobs…"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
             />
-            <Button className="btn-primary">Search</Button>
-          </div>
-        </div>
-      </section>
+            <button className="btn-primary" type="submit">
+              Search
+            </button>
+          </form>
+        </section>
 
-      {/* Job cards */}
-      <section className="mx-auto max-w-5xl px-6 py-10">
-        <h2 className="mb-6 text-xl font-semibold text-uga-dark">Open Roles</h2>
+        <h2 className="h2 mt-xl">Open Roles</h2>
 
-        <div className="grid gap-6 sm:grid-cols-2">
-          {filtered.map((job) => (
-            <div
-              key={job.id}
-              className="rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="p-5">
-                <h3 className="text-lg font-semibold text-uga-dark">{job.title}</h3>
-                <p className="text-sm text-gray-600">
-                  {job.company} • Deadline:{" "}
-                  {new Date(job.deadline).toLocaleDateString()}
-                </p>
-                {job.description && (
-                  <p className="mt-2 text-sm text-gray-700">{job.description}</p>
-                )}
+        {/* Cards list */}
+        <div className="cards">
+          {filtered.map((p) => (
+            <article key={p.id} className="card">
+              <div className="card-body">
+                <h3 className="card-title">{p.title}</h3>
+                <div className="muted">
+                  {p.company}
+                  {p.deadline ? ` • Deadline: ${new Date(p.deadline).toLocaleDateString()}` : ""}
+                </div>
 
-                <div className="mt-4 flex gap-3">
-                  <Link href={`/jobs/${job.id}`}>
-                    <Button className="btn-secondary">View Details</Button>
-                  </Link>
-                  <a
-                    href="#"
-                    onClick={() =>
-                      window.open("mailto:recruiter@" + job.company.toLowerCase() + ".com")
-                    }
-                  >
-                    <Button className="btn-primary">Apply</Button>
+                {p.summary && <p className="mt-sm">{p.summary}</p>}
+
+                <div className="actions">
+                  {/* If you later add /jobs/[id], link to it here */}
+                  <a className="btn-outline" href="#" onClick={(e) => e.preventDefault()}>
+                    View details
                   </a>
+                  <button className="btn-primary" onClick={() => onApply(p)}>
+                    Apply
+                  </button>
                 </div>
               </div>
-            </div>
+            </article>
           ))}
 
           {!filtered.length && (
-            <p className="text-gray-500">No roles match your search.</p>
+            <p className="muted mt-lg">No jobs match your search.</p>
           )}
         </div>
-      </section>
+      </div>
     </main>
   );
 }
