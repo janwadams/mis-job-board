@@ -1,11 +1,10 @@
+/* src/app/globals.css */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* -------------------------------
    UGA-Inspired Theme
-   Red (#BA0C2F), Black (#000000),
-   Cream background (#FDFBF7)
 --------------------------------- */
 
 :root {
@@ -48,21 +47,37 @@ a:hover {
 
 /* -------------------------------
    Buttons
+   (no @apply — plain CSS for Vercel build)
 --------------------------------- */
 .btn-primary {
-  @apply px-4 py-2 rounded-md font-semibold;
   background-color: var(--color-uga-red);
-  color: white;
+  color: #ffffff;
+  padding: 0.5rem 1rem;      /* px-4 py-2 */
+  border-radius: 0.375rem;   /* rounded-md */
+  font-weight: 600;          /* font-semibold */
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.25rem;
+  cursor: pointer;
 }
 .btn-primary:hover {
   background-color: #8a0a23; /* darker UGA red */
 }
 
 .btn-secondary {
-  @apply px-4 py-2 rounded-md font-semibold border;
-  background-color: white;
-  border-color: var(--color-uga-black);
+  background-color: #ffffff;
   color: var(--color-uga-black);
+  padding: 0.5rem 1rem;      /* px-4 py-2 */
+  border-radius: 0.375rem;   /* rounded-md */
+  font-weight: 600;          /* font-semibold */
+  border: 1px solid var(--color-uga-black);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1.25rem;
+  cursor: pointer;
 }
 .btn-secondary:hover {
   background-color: #f3f3f3;
@@ -72,38 +87,27 @@ a:hover {
    Cards
 --------------------------------- */
 .card {
-  @apply rounded-xl shadow-md border p-5;
-  background-color: white;
-  border-color: #e5e7eb; /* light gray */
+  border-radius: 0.75rem;    /* rounded-xl */
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.1); /* shadow-md-ish */
+  border: 1px solid #e5e7eb; /* light gray */
+  padding: 1.25rem;          /* p-5 */
+  background-color: #ffffff;
 }
 
 /* -------------------------------
-   Typography
+   Typography helpers
 --------------------------------- */
 h1, h2, h3, h4, h5, h6 {
-  font-weight: 700;
+  font-weight: 700;          /* font-bold */
   color: var(--color-uga-black);
 }
 
-p {
-  color: #333;
-}
+p { color: #333; }
 
 /* -------------------------------
    Utility Helpers
 --------------------------------- */
-.text-uga-red {
-  color: var(--color-uga-red);
-}
-
-.bg-uga-red {
-  background-color: var(--color-uga-red);
-}
-
-.bg-uga-black {
-  background-color: var(--color-uga-black);
-}
-
-.bg-uga-cream {
-  background-color: var(--color-uga-cream);
-}
+.text-uga-red { color: var(--color-uga-red); }
+.bg-uga-red   { background-color: var(--color-uga-red); }
+.bg-uga-black { background-color: var(--color-uga-black); }
+.bg-uga-cream { background-color: var(--color-uga-cream); }

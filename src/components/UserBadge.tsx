@@ -19,7 +19,8 @@ export default function UserBadge() {
       } = await supabase.auth.getUser();
 
       if (user) {
-        setEmail(user.email);
+        //setEmail(user.email);
+		setEmail(user.email ?? null);
 
         const { data: prof } = await supabase
           .from<Profile>("profiles")
